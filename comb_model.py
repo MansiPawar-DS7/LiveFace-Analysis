@@ -13,9 +13,11 @@ import gdown
 IMG_SIZE = 224
 CONFIDENCE_THRESHOLD = 0.25
 
-AGE_MODEL_PATH = r"C:\Users\Admin\Documents\TY_Project\training_age_model.h5"
-GENDER_MODEL_PATH = r"C:\Users\Admin\Documents\TY_Project\mobilenetv2_utkface_gender.h5"
-EMOTION_MODEL_PATH = r"C:\Users\Admin\Documents\TY_Project\best_emotion_model.h5"
+BASE_DIR = os.path.dirname(__file__)
+
+AGE_MODEL_PATH = os.path.join(BASE_DIR, "models","training_age_model.h5")
+GENDER_MODEL_PATH = os.path.join(BASE_DIR, "models","mobilenetv2_utkface_gender.h5")
+EMOTION_MODEL_PATH = os.path.join(BASE_DIR, "models","best_emotion_model.h5")
 
 
 if not os.path.exists(EMOTION_MODEL_PATH):
