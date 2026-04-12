@@ -19,6 +19,8 @@ AGE_MODEL_PATH = os.path.join(BASE_DIR, "models","training_age_model.h5")
 GENDER_MODEL_PATH = os.path.join(BASE_DIR, "models","mobilenetv2_utkface_gender.h5")
 EMOTION_MODEL_PATH = os.path.join(BASE_DIR, "models","best_emotion_model.h5")
 
+# ensure folder exists (VERY IMPORTANT FOR STREAMLIT CLOUD)
+os.makedirs(os.path.dirname(EMOTION_MODEL_PATH), exist_ok=True)
 
 if not os.path.exists(EMOTION_MODEL_PATH):
     url = "https://drive.google.com/uc?id=1sMqDb8zopHNa2m_Q3xNM84lQmmFZR1de"
