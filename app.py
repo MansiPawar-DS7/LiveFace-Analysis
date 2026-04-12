@@ -1,30 +1,23 @@
 import streamlit as st
-import cv2
-import time
-from comb_model import process_frame 
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+import av
+from comb_model import process_frame
 
 # PAGE CONFIG 
-st.set_page_config(                           #this is about the page
+st.set_page_config(
     page_title="AI Face Analytics",
     page_icon="🎀",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# SESSION STATE 
-if 'camera_active' not in st.session_state:
-    st.session_state.camera_active = False
-
-if 'cap' not in st.session_state:
-    st.session_state.cap = None
-
 # HEADER 
 st.markdown("<h1 style='text-align:center;'>🎀 AI Face Analytics 🎀</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>Turn on your camera to reveal your age, mood, and more!</p>", unsafe_allow_html=True)
 
 # LAYOUT
-col1, col2 = st.columns([3,1])      #col 1(left) > main camera display | col 2(right) > info panel, buttons, tips
- 
+col1, col2 = st.columns([3,1])
+
 # RIGHT PANEL 
 with col2:
 
@@ -41,19 +34,6 @@ with col2:
 
     st.write("")
 
-    # Start / Stop camera buttons
-    if not st.session_state.camera_active:
-        if st.button("Start Camera 📸"):
-            st.session_state.camera_active = True
-    else:
-        if st.button("Stop Camera ⏹️"):
-            st.session_state.camera_active = False
-            if st.session_state.cap:
-                st.session_state.cap.release()
-                st.session_state.cap = None
-
-    st.write("")
-
     st.markdown("""
     <div style="background:white;padding:20px;border-radius:20px;border:2px solid #E2F0CB;">
     <b>✨ Model Features</b><br><br>
@@ -63,50 +43,67 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
+# 🎥 WebRTC Video Processor
+class VideoProcessor(VideoTransformerBase):
+
+    def __init__(self):
+        self.latest_message = None
+
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+
+        processed_frame, emotion, message = process_frame(img)
+
+        # Store in session_state (IMPORTANT)
+        if message:
+            self.latest_message = message
+        return processed_frame
+
 # LEFT PANEL (CAMERA)
 with col1:
 
-    video_placeholder = st.empty()        #camera place
-    message_placeholder = st.empty()      #message place
+    st.markdown("### 🎥 Live Camera")
+    st.write("")
 
-    if st.session_state.camera_active:
-        
-        if st.session_state.cap is None:
-            st.session_state.cap = cv2.VideoCapture(0)
+    camera_placeholder = st.empty()
+    message_placeholder = st.empty()
 
-        cap = st.session_state.cap
+    webrtc_ctx = webrtc_streamer(
+        key="live-camera",
+        video_processor_factory=VideoProcessor,
+        media_stream_constraints={"video": True, "audio": False},
+    )
 
-        # Stream frames
-        while st.session_state.camera_active:
-            ret, frame = cap.read()
-            if not ret:
-                st.warning("Failed to capture frame")
-                break
+    # 🔥 LIVE MESSAGE LOOP (THIS FIXES EVERYTHING)
+    if webrtc_ctx.state.playing:
+        while True:
+            if webrtc_ctx.video_processor:
+                message = webrtc_ctx.video_processor.latest_message
 
-            # Process frame
-            processed_frame, emotion, message = process_frame(frame)
+                if message:
+                    message_placeholder.markdown(
+                        f"""
+                        <div style="
+                            background:#E0F2F1;
+                            padding:15px;
+                            border-radius:15px;
+                            text-align:center;
+                            font-size:18px;
+                        ">
+                            💬 {message}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+            else:
+                message_placeholder.write("")
 
-            # Display
-            video_placeholder.image(
-                processed_frame,
-                channels="BGR",
-                use_container_width=True
-            )
+            import time
+            time.sleep(0.5)
 
-            if message:
-                message_placeholder.markdown(
-                    f"<div style='background:#E0F2F1;padding:15px;border-radius:15px;text-align:center;'>💬 {message}</div>",
-                    unsafe_allow_html=True
-                )
-
-            time.sleep(0.03)  # small delay to reduce CPU usage
-
-        # Release camera after stopping
-        cap.release()
-        st.session_state.cap = None
-
-    else:
-        video_placeholder.markdown("""
+    # Camera OFF UI
+    if not webrtc_ctx.state.playing:
+        camera_placeholder.markdown("""
         <div style="
             background:#F0F4F8;
             height:480px;
@@ -118,7 +115,7 @@ with col1:
             border:3px dashed #CFD8DC;
         ">
             <h2>📷 Camera is Off</h2>
-            <p>Click Start Camera</p>
+            <p>Click START below</p>
         </div>
         """, unsafe_allow_html=True)
 
