@@ -13,15 +13,15 @@ import gdown
 IMG_SIZE = 224
 CONFIDENCE_THRESHOLD = 0.25
 
-BASE_DIR = os.path.dirname(__file__)
+AGE_MODEL_PATH = r"C:\Users\Admin\Documents\TY_Project\training_age_model.h5"
+GENDER_MODEL_PATH = r"C:\Users\Admin\Documents\TY_Project\mobilenetv2_utkface_gender.h5"
+EMOTION_MODEL_PATH = r"C:\Users\Admin\Documents\TY_Project\best_emotion_model.h5"
 
-AGE_MODEL_PATH = os.path.join(BASE_DIR, "training_age_model.h5")
-GENDER_MODEL_PATH = os.path.join(BASE_DIR, "mobilenetv2_utkface_gender.h5")
-EMOTION_MODEL_PATH = os.path.join(BASE_DIR, "best_emotion_model.h5")
 
 if not os.path.exists(EMOTION_MODEL_PATH):
     url = "https://drive.google.com/uc?id=1sMqDb8zopHNa2m_Q3xNM84lQmmFZR1de"
     gdown.download(url, EMOTION_MODEL_PATH, quiet=False)
+
 
 # LABELS
 emotion_labels = [
@@ -142,7 +142,7 @@ def process_frame(frame):
             age = int(age_pred[0][0] * 100)
 
         # MESSAGE
-        message = get_motivational_message(emotion)      #calling message function that gives message based on emotion
+        message = get_motivational_message(emotion)     #calling message function that gives message based on emotion
 
         # DRAW  --- it will draw a box around a face along with the age, gender and emotion
         cv2.rectangle(frame, (x, y), (x+w, y+h), (0,255,0), 2)
@@ -157,5 +157,10 @@ def process_frame(frame):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
 
         break
+        # If no face detected
+
+    if message is None:
+        emotion = "Uncertain"
+        message = get_motivational_message(emotion)
 
     return frame, emotion, message
