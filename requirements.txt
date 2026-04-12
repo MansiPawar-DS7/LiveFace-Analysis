@@ -1,5 +1,7 @@
 streamlit
 opencv-python-headless
+streamlit-webrtc
+av
 numpy
 tensorflow==2.19.0
 scikit-learn
