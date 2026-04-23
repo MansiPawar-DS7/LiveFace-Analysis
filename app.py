@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
 import av
 from comb_model import process_frame
 
@@ -68,10 +68,20 @@ with col1:
     camera_placeholder = st.empty()
     message_placeholder = st.empty()
 
+    RTC_CONFIGURATION = RTCConfiguration(
+    {
+        "iceServers": [
+            {"urls": ["stun:stun.l.google.com:19302"]},
+            {"urls": ["stun:stun1.l.google.com:19302"]}
+        ]
+    }
+    )
+    
     webrtc_ctx = webrtc_streamer(
         key="live-camera",
         video_processor_factory=VideoProcessor,
         media_stream_constraints={"video": True, "audio": False},
+        rtc_configuration=RTC_CONFIGURATION
     )
 
     # 🔥 LIVE MESSAGE LOOP (THIS FIXES EVERYTHING)
