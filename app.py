@@ -1,9 +1,8 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
-import av
+import cv2
 from comb_model import process_frame
 
-# PAGE CONFIG 
+# PAGE CONFIG
 st.set_page_config(
     page_title="AI Face Analytics",
     page_icon="🎀",
@@ -11,14 +10,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# HEADER 
+# HEADER
 st.markdown("<h1 style='text-align:center;'>🎀 AI Face Analytics 🎀</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>Turn on your camera to reveal your age, mood, and more!</p>", unsafe_allow_html=True)
 
 # LAYOUT
 col1, col2 = st.columns([3,1])
 
-# RIGHT PANEL 
+# RIGHT PANEL
 with col2:
 
     st.markdown("""
@@ -43,53 +42,64 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
-# 🎥 WebRTC Video Processor
-class VideoProcessor(VideoTransformerBase):
+    st.write("")
 
-    def __init__(self):
-        self.latest_message = None
+    st.markdown("""
+    <div style="background:#FFEBEE;padding:20px;border-radius:20px;border:2px solid #EF9A9A;">
+    <b>⚠️ Important Note</b><br><br>
+    If the camera gets stuck or your face is not detected:<br><br>
+    👉 Stop the camera and restart it<br>
+    </div>
+    """, unsafe_allow_html=True)
 
-    def transform(self, frame):
-        img = frame.to_ndarray(format="bgr24")
 
-        processed_frame, emotion, message = process_frame(img)
-
-        # Store in session_state (IMPORTANT)
-        if message:
-            self.latest_message = message
-        return processed_frame
-
-# LEFT PANEL (CAMERA)
+# LEFT PANEL
 with col1:
 
     st.markdown("### 🎥 Live Camera")
-    st.write("")
 
-    camera_placeholder = st.empty()
+    frame_placeholder = st.empty()
     message_placeholder = st.empty()
 
-    RTC_CONFIGURATION = RTCConfiguration(
-    {
-        "iceServers": [
-            {"urls": ["stun:stun.l.google.com:19302"]},
-            {"urls": ["stun:stun1.l.google.com:19302"]}
-        ]
-    }
-    )
-    
-    webrtc_ctx = webrtc_streamer(
-        key="live-camera",
-        video_processor_factory=VideoProcessor,
-        media_stream_constraints={"video": True, "audio": False},
-        rtc_configuration=RTC_CONFIGURATION
-    )
+    # SESSION STATE INIT
+    if "run" not in st.session_state:
+        st.session_state.run = False
 
-    # 🔥 LIVE MESSAGE LOOP (THIS FIXES EVERYTHING)
-    if webrtc_ctx.state.playing:
-        while True:
-            if webrtc_ctx.video_processor:
-                message = webrtc_ctx.video_processor.latest_message
+    # TOGGLE BUTTON (START ↔ STOP)
+    if st.session_state.run:
+        if st.button("⛔ Stop Camera"):
+            st.session_state.run = False
+    else:
+        if st.button("▶ Start Camera"):
+            st.session_state.run = True
 
+    cap = None
+
+    # CAMERA ON
+    if st.session_state.run:
+
+        cap = cv2.VideoCapture(0)
+
+        if not cap.isOpened():
+            st.error("❌ Cannot access camera")
+        else:
+            while st.session_state.run:
+
+                ret, frame = cap.read()
+                if not ret:
+                    st.error("Failed to read frame")
+                    break
+
+                # PROCESS FRAME (YOUR MODEL)
+                processed_frame, emotion, message = process_frame(frame)
+
+                # FIXED SIZE CAMERA FRAME
+                processed_frame = cv2.resize(processed_frame, (720, 480))
+
+                # SHOW VIDEO
+                frame_placeholder.image(processed_frame, channels="BGR")
+
+                # SHOW MESSAGE
                 if message:
                     message_placeholder.markdown(
                         f"""
@@ -105,15 +115,12 @@ with col1:
                         """,
                         unsafe_allow_html=True
                     )
-            else:
-                message_placeholder.write("")
 
-            import time
-            time.sleep(0.5)
+        cap.release()
 
-    # Camera OFF UI
-    if not webrtc_ctx.state.playing:
-        camera_placeholder.markdown("""
+    # CAMERA OFF UI
+    else:
+        frame_placeholder.markdown("""
         <div style="
             background:#F0F4F8;
             height:480px;
@@ -125,10 +132,10 @@ with col1:
             border:3px dashed #CFD8DC;
         ">
             <h2>📷 Camera is Off</h2>
-            <p>Click START below</p>
+            <p>Click Start to begin detection</p>
         </div>
         """, unsafe_allow_html=True)
 
-# FOOTER 
+# FOOTER
 st.markdown("---")
 st.markdown("<p style='text-align:center;'>👩‍💻 TY Project | 2026 | M.P </p>", unsafe_allow_html=True)
