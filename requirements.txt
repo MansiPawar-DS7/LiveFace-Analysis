@@ -1,9 +1,8 @@
 streamlit
-opencv-python-headless
-streamlit-webrtc
-av
+opencv-python
 numpy
 tensorflow==2.19.0
 scikit-learn
 matplotlib
 gdown
+protobuf
