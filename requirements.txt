@@ -1,8 +1,11 @@
 streamlit
+streamlit-webrtc
 opencv-python-headless
+av
 numpy
 tensorflow==2.19.0
 scikit-learn
 matplotlib
 gdown
-protobuf
+h5py
+protobuf<5
